@@ -28,9 +28,9 @@ python main.py
 ```
 
 ### Controls
-- **Scroll Wheel**: Vertical Pan / Zoom (with Ctrl/Cmd)
+- **Scroll Wheel**: Vertical Pan / Zoom (with Ctrl / Cmd)
 - **Shift + Scroll**: Horizontal Pan
-- **Right Click / Middle Click / Space+Drag**: Pan Canvas
+- **Right Click / Middle Click / Space + Drag**: Pan Canvas
 - **Left Click**: Apply the selected tool (Fill / Erase / Restore)
 
 ## License
