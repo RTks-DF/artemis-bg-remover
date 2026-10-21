@@ -26,6 +26,7 @@ import customtkinter as ctk
 from PIL import Image, ImageTk, ImageChops, ImageFilter, ImageOps
 import numpy as np
 from collections import deque
+from contextlib import contextmanager
 
 # 既存のテーマ設定を取り込む
 try:
@@ -393,6 +394,16 @@ class AvatarEditorApp(ctk.CTk):
         self.pan_x = cw - (cw - self.pan_x) * (self.zoom_level / old_zoom)
         self.pan_y = ch - (ch - self.pan_y) * (self.zoom_level / old_zoom)
         self.update_canvas()
+    @contextmanager
+    def temporary_topmost_disabled(self):
+        """ダイアログ表示時に一時的に最前面表示を解除し、終了後に元の状態へ復元するコンテキストマネージャ"""
+        was_topmost = bool(self.attributes("-topmost"))
+        self.attributes("-topmost", False)
+        try:
+            yield
+        finally:
+            self.attributes("-topmost", was_topmost)
+
     def load_image(self, path):
         try:
             self.image_path = path
@@ -405,9 +416,8 @@ class AvatarEditorApp(ctk.CTk):
             self.lbl_status.configure(text=f"読込完了: {os.path.basename(path)} ({img.width}x{img.height})")
             self.update_canvas()
         except Exception as e:
-            self.attributes("-topmost", False)
-            messagebox.showerror("エラー", f"画像の読み込みに失敗しました:\n{e}")
-            self.attributes("-topmost", True)
+            with self.temporary_topmost_disabled():
+                messagebox.showerror("エラー", f"画像の読み込みに失敗しました:\n{e}")
             
     def load_fallback_image(self):
         # ワークスペース内の preset アバターを探索
@@ -431,26 +441,22 @@ class AvatarEditorApp(ctk.CTk):
             self.lbl_status.configure(text="アバター画像が見つからないため、一時的なプレースホルダーを表示中")
             
     def open_image_dialog(self):
-        # -topmost による最前面固定を一時解除してファイルダイアログを前面に出す
-        self.attributes("-topmost", False)
-        path = filedialog.askopenfilename(
-            parent=self,
-            filetypes=[("PNG Images", "*.png"), ("All Files", "*.*")]
-        )
-        self.attributes("-topmost", True)
+        with self.temporary_topmost_disabled():
+            path = filedialog.askopenfilename(
+                parent=self,
+                filetypes=[("PNG Images", "*.png"), ("All Files", "*.*")]
+            )
         if path:
             self.load_image(path)
             
     def save_image(self):
         if not self.image_path:
-            # 別名保存: -topmost を一時解除してダイアログを前面に出す
-            self.attributes("-topmost", False)
-            path = filedialog.asksaveasfilename(
-                parent=self,
-                defaultextension=".png",
-                filetypes=[("PNG Image", "*.png")]
-            )
-            self.attributes("-topmost", True)
+            with self.temporary_topmost_disabled():
+                path = filedialog.asksaveasfilename(
+                    parent=self,
+                    defaultextension=".png",
+                    filetypes=[("PNG Image", "*.png")]
+                )
             if not path:
                 return
             self.image_path = path
@@ -464,14 +470,12 @@ class AvatarEditorApp(ctk.CTk):
             )
         except PermissionError:
             self.lbl_status.configure(text="⚠ 保存失敗: ファイルが使用中です")
-            self.attributes("-topmost", False)
-            messagebox.showerror("保存エラー", f"ファイルへの書き込み権限がありません:\n{self.image_path}")
-            self.attributes("-topmost", True)
+            with self.temporary_topmost_disabled():
+                messagebox.showerror("保存エラー", f"ファイルへの書き込み権限がありません:\n{self.image_path}")
         except Exception as e:
             self.lbl_status.configure(text=f"⚠ 保存失敗: {e}")
-            self.attributes("-topmost", False)
-            messagebox.showerror("保存エラー", f"画像の保存に失敗しました:\n{e}")
-            self.attributes("-topmost", True)
+            with self.temporary_topmost_disabled():
+                messagebox.showerror("保存エラー", f"画像の保存に失敗しました:\n{e}")
 
     # ==========================================
     # 画像編集ロジック (Undo/Redo 含む)
@@ -552,14 +556,12 @@ class AvatarEditorApp(ctk.CTk):
             self.update_canvas()
             self.lbl_status.configure(text="AI背景透過が成功しました！残った内側を調整してください。")
         except ImportError:
-            self.attributes("-topmost", False)
-            messagebox.showerror("インポートエラー", "rembg ライブラリがロードできません。仮想環境の依存関係を確認してください。")
-            self.attributes("-topmost", True)
+            with self.temporary_topmost_disabled():
+                messagebox.showerror("インポートエラー", "rembg ライブラリがロードできません。仮想環境の依存関係を確認してください。")
             self.lbl_status.configure(text="AI背景透過に失敗しました（ライブラリ不在）")
         except Exception as e:
-            self.attributes("-topmost", False)
-            messagebox.showerror("エラー", f"AI背景透過実行中にエラーが発生しました:\n{e}")
-            self.attributes("-topmost", True)
+            with self.temporary_topmost_disabled():
+                messagebox.showerror("エラー", f"AI背景透過実行中にエラーが発生しました:\n{e}")
             self.lbl_status.configure(text="AI背景透過エラー")
 
     # ==========================================
